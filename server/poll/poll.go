@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/mattermost/mattermost-server/v5/model"
-	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/matterpoll/matterpoll/server/i18n"
 )
 
 // Poll stores all needed information for a poll
@@ -44,6 +44,15 @@ type VotedAnswerResponse struct {
 type ErrorMessage struct {
 	Message *i18n.Message
 	Data    map[string]interface{}
+}
+
+// LocalizeErrorMessage localizer the provided error message
+func (m *ErrorMessage) Localize(b *i18n.Bundle, l *i18n.Localizer) string {
+	lc := &i18n.LocalizeConfig{
+		DefaultMessage: m.Message,
+		TemplateData:   m.Data,
+	}
+	return b.LocalizeWithConfig(l, lc)
 }
 
 // NewPoll creates a new poll with the given paramatern.

@@ -10,10 +10,10 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
+	"github.com/matterpoll/matterpoll/server/i18n"
 	"github.com/matterpoll/matterpoll/server/poll"
 	"github.com/matterpoll/matterpoll/server/store"
 	"github.com/matterpoll/matterpoll/server/store/kvstore"
-	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/pkg/errors"
 )
 
@@ -68,7 +68,14 @@ func (p *MatterpollPlugin) OnActivate() error {
 		return errors.Wrap(err, "failed to create store")
 	}
 
-	p.bundle, err = p.initBundle()
+	bundlePath, err := p.API.GetBundlePath()
+	if err != nil {
+		return errors.Wrap(err, "failed to get bundle path")
+	}
+
+	i18nDir := filepath.Join(bundlePath, "assets", "i18n")
+
+	p.bundle, err = i18n.InitBundle(p.API, i18nDir)
 	if err != nil {
 		return errors.Wrap(err, "failed to init localisation bundle")
 	}
@@ -130,8 +137,8 @@ func (p *MatterpollPlugin) checkServerVersion() error {
 
 // patchBotDescription updates the bot description based on the servers local
 func (p *MatterpollPlugin) patchBotDescription() error {
-	publicLocalizer := p.getServerLocalizer()
-	description := p.LocalizeDefaultMessage(publicLocalizer, botDescription)
+	publicLocalizer := p.bundle.GetServerLocalizer()
+	description := p.bundle.LocalizeDefaultMessage(publicLocalizer, botDescription)
 
 	// Update description with server local
 	botPatch := &model.BotPatch{

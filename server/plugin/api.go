@@ -144,7 +144,7 @@ func (p *MatterpollPlugin) handlePostActionIntegrationRequest(handler postAction
 			http.Error(w, "invalid request", http.StatusBadRequest)
 			return
 		}
-		userLocalizer := p.getUserLocalizer(request.UserId)
+		userLocalizer := p.bundle.GetUserLocalizer(request.UserId)
 
 		msg, update, err := handler(mux.Vars(r), request)
 		if err != nil {
@@ -152,7 +152,7 @@ func (p *MatterpollPlugin) handlePostActionIntegrationRequest(handler postAction
 		}
 
 		if msg != nil {
-			p.SendEphemeralPost(request.ChannelId, request.UserId, p.LocalizeDefaultMessage(userLocalizer, msg))
+			p.SendEphemeralPost(request.ChannelId, request.UserId, p.bundle.LocalizeDefaultMessage(userLocalizer, msg))
 		}
 
 		response := &model.PostActionIntegrationResponse{}
@@ -182,8 +182,8 @@ func (p *MatterpollPlugin) handleSubmitDialogRequest(handler submitDialogHandler
 		}
 
 		if msg != nil {
-			userLocalizer := p.getUserLocalizer(request.UserId)
-			p.SendEphemeralPost(request.ChannelId, request.UserId, p.LocalizeDefaultMessage(userLocalizer, msg))
+			userLocalizer := p.bundle.GetUserLocalizer(request.UserId)
+			p.SendEphemeralPost(request.ChannelId, request.UserId, p.bundle.LocalizeDefaultMessage(userLocalizer, msg))
 		}
 
 		if response != nil {
@@ -230,7 +230,7 @@ func (p *MatterpollPlugin) handleVote(vars map[string]string, request *model.Pos
 	}, &model.WebsocketBroadcast{UserId: userID})
 
 	post := &model.Post{}
-	publicLocalizer := p.getServerLocalizer()
+	publicLocalizer := p.bundle.GetServerLocalizer()
 	model.ParseSlackAttachment(post, poll.ToPostActions(publicLocalizer, manifest.ID, displayName))
 	post.AddProp("poll_id", poll.ID)
 
@@ -242,7 +242,7 @@ func (p *MatterpollPlugin) handleVote(vars map[string]string, request *model.Pos
 
 func (p *MatterpollPlugin) handleAddOption(vars map[string]string, request *model.PostActionIntegrationRequest) (*i18n.Message, *model.Post, error) {
 	pollID := vars["id"]
-	userLocalizer := p.getUserLocalizer(request.UserId)
+	userLocalizer := p.bundle.GetUserLocalizer(request.UserId)
 
 	poll, err := p.Store.Poll().Get(pollID)
 	if err != nil {
@@ -264,18 +264,18 @@ func (p *MatterpollPlugin) handleAddOption(vars map[string]string, request *mode
 		TriggerId: request.TriggerId,
 		URL:       fmt.Sprintf("/plugins/%s/api/v1/polls/%s/option/add", manifest.ID, pollID),
 		Dialog: model.Dialog{
-			Title: p.LocalizeDefaultMessage(userLocalizer, &i18n.Message{
+			Title: p.bundle.LocalizeDefaultMessage(userLocalizer, &i18n.Message{
 				ID:    "dialog.addOption.title",
 				Other: "Add Option",
 			}),
 			IconURL:    fmt.Sprintf(responseIconURL, siteURL, manifest.ID),
 			CallbackId: request.PostId,
-			SubmitLabel: p.LocalizeDefaultMessage(userLocalizer, &i18n.Message{
+			SubmitLabel: p.bundle.LocalizeDefaultMessage(userLocalizer, &i18n.Message{
 				ID:    "dialog.addOption.submitLabel",
 				Other: "Add",
 			}),
 			Elements: []model.DialogElement{{
-				DisplayName: p.LocalizeDefaultMessage(userLocalizer, &i18n.Message{
+				DisplayName: p.bundle.LocalizeDefaultMessage(userLocalizer, &i18n.Message{
 					ID:    "dialog.addOption.element.displayName",
 					Other: "Option",
 				}),
@@ -315,7 +315,7 @@ func (p *MatterpollPlugin) handleAddOptionConfirm(vars map[string]string, reques
 		return commandErrorGeneric, nil, errors.Errorf("failed to get submission key: %s", addOptionKey)
 	}
 
-	userLocalizer := p.getUserLocalizer(poll.Creator)
+	userLocalizer := p.bundle.GetUserLocalizer(poll.Creator)
 
 	if errMsg := poll.AddAnswerOption(answerOption); errMsg != nil {
 		response := &model.SubmitDialogResponse{
@@ -326,7 +326,7 @@ func (p *MatterpollPlugin) handleAddOptionConfirm(vars map[string]string, reques
 		return nil, response, nil
 	}
 
-	publicLocalizer := p.getServerLocalizer()
+	publicLocalizer := p.bundle.GetServerLocalizer()
 	model.ParseSlackAttachment(post, poll.ToPostActions(publicLocalizer, manifest.ID, displayName))
 	if _, appErr = p.API.UpdatePost(post); appErr != nil {
 		return commandErrorGeneric, nil, errors.Wrap(appErr, "failed to update post")
@@ -341,7 +341,7 @@ func (p *MatterpollPlugin) handleAddOptionConfirm(vars map[string]string, reques
 
 func (p *MatterpollPlugin) handleEndPoll(vars map[string]string, request *model.PostActionIntegrationRequest) (*i18n.Message, *model.Post, error) {
 	pollID := vars["id"]
-	userLocalizer := p.getUserLocalizer(request.UserId)
+	userLocalizer := p.bundle.GetUserLocalizer(request.UserId)
 
 	poll, err := p.Store.Poll().Get(pollID)
 	if err != nil {
@@ -361,13 +361,13 @@ func (p *MatterpollPlugin) handleEndPoll(vars map[string]string, request *model.
 		TriggerId: request.TriggerId,
 		URL:       fmt.Sprintf("/plugins/%s/api/v1/polls/%s/end/confirm", manifest.ID, pollID),
 		Dialog: model.Dialog{
-			Title: p.LocalizeDefaultMessage(userLocalizer, &i18n.Message{
+			Title: p.bundle.LocalizeDefaultMessage(userLocalizer, &i18n.Message{
 				ID:    "dialog.end.title",
 				Other: "Confirm Poll End",
 			}),
 			IconURL:    fmt.Sprintf(responseIconURL, siteURL, manifest.ID),
 			CallbackId: request.PostId,
-			SubmitLabel: p.LocalizeDefaultMessage(userLocalizer, &i18n.Message{
+			SubmitLabel: p.bundle.LocalizeDefaultMessage(userLocalizer, &i18n.Message{
 				ID:    "dialog.end.submitLabel",
 				Other: "End",
 			}),
@@ -393,7 +393,7 @@ func (p *MatterpollPlugin) handleEndPollConfirm(vars map[string]string, request 
 		return commandErrorGeneric, nil, errors.Wrap(appErr, "failed to get display name for creator")
 	}
 
-	post, appErr := poll.ToEndPollPost(p.getServerLocalizer(), displayName, p.ConvertUserIDToDisplayName)
+	post, appErr := poll.ToEndPollPost(p.bundle.GetServerLocalizer(), displayName, p.ConvertUserIDToDisplayName)
 	if appErr != nil {
 		return commandErrorGeneric, nil, errors.Wrap(appErr, "failed to get convert to end poll post")
 	}
@@ -417,7 +417,7 @@ func (p *MatterpollPlugin) postEndPollAnnouncement(channelID, postID, question s
 		UserId:    p.botUserID,
 		ChannelId: channelID,
 		RootId:    postID,
-		Message: p.LocalizeWithConfig(p.getServerLocalizer(), &i18n.LocalizeConfig{
+		Message: p.bundle.LocalizeWithConfig(p.bundle.GetServerLocalizer(), &i18n.LocalizeConfig{
 			DefaultMessage: responseEndPollSuccessfully,
 			TemplateData: map[string]interface{}{
 				"Question": question,
@@ -433,7 +433,7 @@ func (p *MatterpollPlugin) postEndPollAnnouncement(channelID, postID, question s
 
 func (p *MatterpollPlugin) handleDeletePoll(vars map[string]string, request *model.PostActionIntegrationRequest) (*i18n.Message, *model.Post, error) {
 	pollID := vars["id"]
-	userLocalizer := p.getUserLocalizer(request.UserId)
+	userLocalizer := p.bundle.GetUserLocalizer(request.UserId)
 
 	poll, err := p.Store.Poll().Get(pollID)
 	if err != nil {
@@ -453,13 +453,13 @@ func (p *MatterpollPlugin) handleDeletePoll(vars map[string]string, request *mod
 		TriggerId: request.TriggerId,
 		URL:       fmt.Sprintf("/plugins/%s/api/v1/polls/%s/delete/confirm", manifest.ID, pollID),
 		Dialog: model.Dialog{
-			Title: p.LocalizeDefaultMessage(userLocalizer, &i18n.Message{
+			Title: p.bundle.LocalizeDefaultMessage(userLocalizer, &i18n.Message{
 				ID:    "dialog.delete.title",
 				Other: "Confirm Poll Delete",
 			}),
 			IconURL:    fmt.Sprintf(responseIconURL, siteURL, manifest.ID),
 			CallbackId: request.PostId,
-			SubmitLabel: p.LocalizeDefaultMessage(userLocalizer, &i18n.Message{
+			SubmitLabel: p.bundle.LocalizeDefaultMessage(userLocalizer, &i18n.Message{
 				ID:    "dialog.delete.submitLabel",
 				Other: "Delete",
 			}),
