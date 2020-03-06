@@ -78,6 +78,7 @@ func (p *MatterpollPlugin) OnActivate() error {
 	}
 	options := []plugin.EnsureBotOption{
 		plugin.ProfileImagePath("assets/logo_dark.png"),
+		plugin.IconImagePath("assets/logo_dark.svg"),
 	}
 	botUserID, appErr := p.Helpers.EnsureBot(bot, options...)
 	if appErr != nil {
