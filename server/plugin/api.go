@@ -194,6 +194,11 @@ func (p *MatterpollPlugin) handleSubmitDialogRequest(handler submitDialogHandler
 			return
 		}
 
+		if !p.API.HasPermissionToChannel(request.UserId, request.ChannelId, model.PERMISSION_READ_CHANNEL) {
+			http.Error(w, "not authorized", http.StatusUnauthorized)
+			return
+		}
+
 		msg, response, err := handler(mux.Vars(r), request)
 		if err != nil {
 			p.API.LogWarn("failed to handle SubmitDialogRequest", "error", err.Error())
