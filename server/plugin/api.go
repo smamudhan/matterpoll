@@ -194,7 +194,32 @@ func (p *MatterpollPlugin) handleSubmitDialogRequest(handler submitDialogHandler
 			return
 		}
 
-		msg, response, err := handler(mux.Vars(r), request)
+		vars := mux.Vars(r)
+
+		pollID := vars["id"]
+		poll, err := p.Store.Poll().Get(pollID)
+		if err != nil {
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+
+		post, appEerr := p.API.GetPost(poll.PostID)
+		if appEerr != nil {
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+
+		if request.ChannelId != post.ChannelId {
+			http.Error(w, "not authorized", http.StatusUnauthorized)
+			return
+		}
+
+		if !p.API.HasPermissionToChannel(request.UserId, post.ChannelId, model.PERMISSION_READ_CHANNEL) {
+			http.Error(w, "not authorized", http.StatusUnauthorized)
+			return
+		}
+
+		msg, response, err := handler(vars, request)
 		if err != nil {
 			p.API.LogWarn("failed to handle SubmitDialogRequest", "error", err.Error())
 		}
@@ -266,12 +291,9 @@ func (p *MatterpollPlugin) handleCreatePoll(_ map[string]string, request *model.
 		return commandErrorGeneric, nil, errors.Wrap(appErr, "failed to get display name for creator")
 	}
 
-	if err := p.Store.Poll().Insert(poll); err != nil {
-		return commandErrorGeneric, nil, errors.Wrap(err, "failed to save poll")
-	}
-
 	actions := poll.ToPostActions(publicLocalizer, manifest.ID, displayName)
 	post := &model.Post{
+		Id:        poll.PostID,
 		UserId:    p.botUserID,
 		ChannelId: request.ChannelId,
 		RootId:    request.CallbackId,
@@ -282,8 +304,15 @@ func (p *MatterpollPlugin) handleCreatePoll(_ map[string]string, request *model.
 	}
 	model.ParseSlackAttachment(post, actions)
 
-	if _, appErr = p.API.CreatePost(post); appErr != nil {
+	rPost, appErr := p.API.CreatePost(post)
+	if appErr != nil {
 		return commandErrorGeneric, nil, errors.Wrap(appErr, "failed to create poll post")
+	}
+
+	poll.PostID = rPost.Id
+
+	if err := p.Store.Poll().Insert(poll); err != nil {
+		return commandErrorGeneric, nil, errors.Wrap(err, "failed to save poll")
 	}
 
 	return nil, nil, nil

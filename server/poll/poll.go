@@ -12,6 +12,7 @@ import (
 // Poll stores all needed information for a poll
 type Poll struct {
 	ID            string
+	PostID        string
 	CreatedAt     int64
 	Creator       string
 	Question      string
