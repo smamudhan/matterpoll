@@ -144,6 +144,15 @@ func (p *MatterpollPlugin) handlePostActionIntegrationRequest(handler postAction
 			http.Error(w, "invalid request", http.StatusBadRequest)
 			return
 		}
+		secureToken, ok := request.Context["secure_token"]
+		if secureToken != p.getConfiguration().SecureToken {
+			http.Error(w, "invalid secure token", http.StatusBadRequest)
+			return
+		}
+		// If request doesn't have the secure token, do just logging it, pass through for backward compatibility
+		if !ok {
+			p.API.LogWarn("Poll doesn't have the secure token.", "post_id", request.PostId)
+		}
 
 		if request.UserId != r.Header.Get("Mattermost-User-ID") {
 			http.Error(w, "not authorized", http.StatusUnauthorized)
@@ -275,7 +284,7 @@ func (p *MatterpollPlugin) handleCreatePoll(_ map[string]string, request *model.
 		return commandErrorGeneric, nil, errors.Wrap(err, "failed to save poll")
 	}
 
-	actions := poll.ToPostActions(publicLocalizer, manifest.ID, displayName)
+	actions := poll.ToPostActions(publicLocalizer, manifest.ID, p.getConfiguration().SecureToken, displayName)
 	post := &model.Post{
 		UserId:    p.botUserID,
 		ChannelId: request.ChannelId,
@@ -323,7 +332,7 @@ func (p *MatterpollPlugin) handleVote(vars map[string]string, request *model.Pos
 
 	post := &model.Post{}
 	publicLocalizer := p.getServerLocalizer()
-	model.ParseSlackAttachment(post, poll.ToPostActions(publicLocalizer, manifest.ID, displayName))
+	model.ParseSlackAttachment(post, poll.ToPostActions(publicLocalizer, manifest.ID, p.getConfiguration().SecureToken, displayName))
 	post.AddProp("poll_id", poll.ID)
 
 	if hasVoted {
@@ -435,7 +444,7 @@ func (p *MatterpollPlugin) handleAddOptionConfirm(vars map[string]string, reques
 	}
 
 	publicLocalizer := p.getServerLocalizer()
-	model.ParseSlackAttachment(post, poll.ToPostActions(publicLocalizer, manifest.ID, displayName))
+	model.ParseSlackAttachment(post, poll.ToPostActions(publicLocalizer, manifest.ID, p.getConfiguration().SecureToken, displayName))
 	if _, appErr = p.API.UpdatePost(post); appErr != nil {
 		return commandErrorGeneric, nil, errors.Wrap(appErr, "failed to update post")
 	}

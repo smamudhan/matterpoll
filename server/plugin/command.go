@@ -169,7 +169,7 @@ func (p *MatterpollPlugin) executeCommand(args *model.CommandArgs) (string, *mod
 		return p.LocalizeDefaultMessage(userLocalizer, commandErrorGeneric), nil
 	}
 
-	actions := newPoll.ToPostActions(publicLocalizer, manifest.ID, displayName)
+	actions := newPoll.ToPostActions(publicLocalizer, manifest.ID, p.getConfiguration().SecureToken, displayName)
 	post := &model.Post{
 		UserId:    p.botUserID,
 		ChannelId: args.ChannelId,

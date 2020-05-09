@@ -25,6 +25,12 @@
       "help_text": "Trigger Word must be unique, and cannot begin with a slash or contain any spaces.",
       "default": "poll"
     },{
+      "key": "SecureToken",
+      "display_name": "Secure Token",
+      "type": "generated",
+      "help_text": "",
+      "regenerate_help_text": "**Regenerating will break existing polls.**"
+    },{
       "key": "ExperimentalUI",
       "display_name": "Experimental UI",
       "type": "bool",

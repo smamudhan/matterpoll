@@ -55,7 +55,7 @@ var (
 )
 
 // ToPostActions returns the poll as a message
-func (p *Poll) ToPostActions(localizer *i18n.Localizer, pluginID, authorName string) []*model.SlackAttachment {
+func (p *Poll) ToPostActions(localizer *i18n.Localizer, pluginID, secureToken, authorName string) []*model.SlackAttachment {
 	numberOfVotes := 0
 	actions := []*model.PostAction{}
 
@@ -71,6 +71,9 @@ func (p *Poll) ToPostActions(localizer *i18n.Localizer, pluginID, authorName str
 			Type: model.POST_ACTION_TYPE_BUTTON,
 			Integration: &model.PostActionIntegration{
 				URL: fmt.Sprintf("/plugins/%s/api/v1/polls/%s/vote/%v", pluginID, p.ID, i),
+				Context: map[string]interface{}{
+					"secure_token": secureToken,
+				},
 			},
 		})
 	}
@@ -82,6 +85,9 @@ func (p *Poll) ToPostActions(localizer *i18n.Localizer, pluginID, authorName str
 			Type: model.POST_ACTION_TYPE_BUTTON,
 			Integration: &model.PostActionIntegration{
 				URL: fmt.Sprintf("/plugins/%s/api/v1/polls/%s/option/add/request", pluginID, p.ID),
+				Context: map[string]interface{}{
+					"secure_token": secureToken,
+				},
 			},
 		}, &model.PostAction{
 			Id:   "deletePoll",
@@ -89,6 +95,9 @@ func (p *Poll) ToPostActions(localizer *i18n.Localizer, pluginID, authorName str
 			Type: MatterpollAdminButtonType,
 			Integration: &model.PostActionIntegration{
 				URL: fmt.Sprintf("/plugins/%s/api/v1/polls/%s/delete", pluginID, p.ID),
+				Context: map[string]interface{}{
+					"secure_token": secureToken,
+				},
 			},
 		}, &model.PostAction{
 			Id:   "endPoll",
@@ -96,6 +105,9 @@ func (p *Poll) ToPostActions(localizer *i18n.Localizer, pluginID, authorName str
 			Type: MatterpollAdminButtonType,
 			Integration: &model.PostActionIntegration{
 				URL: fmt.Sprintf("/plugins/%s/api/v1/polls/%s/end", pluginID, p.ID),
+				Context: map[string]interface{}{
+					"secure_token": secureToken,
+				},
 			},
 		},
 	)
