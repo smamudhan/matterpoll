@@ -33,6 +33,14 @@ type (
 var (
 	infoMessage = "Thanks for using Matterpoll v" + manifest.Version + "\n"
 
+	responseErrorNoSecureToken = &i18n.Message{
+		ID:    "response.validation.error.no_secure_token",
+		Other: "This poll is no longer valid because of no secure token",
+	}
+	responseErrorInvalidSecureToken = &i18n.Message{
+		ID:    "response.validation.error.invalid_secure_token",
+		Other: "This poll is no longer valid because of invalid secure token",
+	}
 	responseVoteCounted = &i18n.Message{
 		ID:    "response.vote.counted",
 		Other: "Your vote has been counted.",
@@ -144,14 +152,19 @@ func (p *MatterpollPlugin) handlePostActionIntegrationRequest(handler postAction
 			http.Error(w, "invalid request", http.StatusBadRequest)
 			return
 		}
+
+		userLocalizer := p.getUserLocalizer(request.UserId)
+
 		secureToken, ok := request.Context["secure_token"]
-		if secureToken != p.getConfiguration().SecureToken {
-			http.Error(w, "invalid secure token", http.StatusBadRequest)
+		if !ok {
+			p.SendEphemeralPost(request.ChannelId, request.UserId, p.LocalizeDefaultMessage(userLocalizer, responseErrorNoSecureToken))
+			http.Error(w, "secure token was not set", http.StatusInternalServerError)
 			return
 		}
-		// If request doesn't have the secure token, do just logging it, pass through for backward compatibility
-		if !ok {
-			p.API.LogWarn("Poll doesn't have the secure token.", "post_id", request.PostId)
+		if secureToken != p.getConfiguration().SecureToken {
+			p.SendEphemeralPost(request.ChannelId, request.UserId, p.LocalizeDefaultMessage(userLocalizer, responseErrorInvalidSecureToken))
+			http.Error(w, "invalid secure token", http.StatusBadRequest)
+			return
 		}
 
 		if request.UserId != r.Header.Get("Mattermost-User-ID") {
@@ -163,8 +176,6 @@ func (p *MatterpollPlugin) handlePostActionIntegrationRequest(handler postAction
 			http.Error(w, "not authorized", http.StatusUnauthorized)
 			return
 		}
-
-		userLocalizer := p.getUserLocalizer(request.UserId)
 
 		msg, update, err := handler(mux.Vars(r), request)
 		if err != nil {
@@ -198,6 +209,19 @@ func (p *MatterpollPlugin) handleSubmitDialogRequest(handler submitDialogHandler
 			return
 		}
 
+		userLocalizer := p.getUserLocalizer(request.UserId)
+
+		if request.State == "" {
+			p.SendEphemeralPost(request.ChannelId, request.UserId, p.LocalizeDefaultMessage(userLocalizer, responseErrorNoSecureToken))
+			http.Error(w, "secure token was not set", http.StatusInternalServerError)
+			return
+		}
+		if request.State != p.getConfiguration().SecureToken {
+			p.SendEphemeralPost(request.ChannelId, request.UserId, p.LocalizeDefaultMessage(userLocalizer, responseErrorInvalidSecureToken))
+			http.Error(w, "invalid state", http.StatusBadRequest)
+			return
+		}
+
 		if request.UserId != r.Header.Get("Mattermost-User-ID") {
 			http.Error(w, "not authorized", http.StatusUnauthorized)
 			return
@@ -214,7 +238,6 @@ func (p *MatterpollPlugin) handleSubmitDialogRequest(handler submitDialogHandler
 		}
 
 		if msg != nil {
-			userLocalizer := p.getUserLocalizer(request.UserId)
 			p.SendEphemeralPost(request.ChannelId, request.UserId, p.LocalizeDefaultMessage(userLocalizer, msg))
 		}
 
@@ -399,6 +422,7 @@ func (p *MatterpollPlugin) handleAddOption(vars map[string]string, request *mode
 				Type:    "text",
 				SubType: "text",
 			}},
+			State: p.getConfiguration().SecureToken,
 		},
 	}
 
@@ -488,6 +512,7 @@ func (p *MatterpollPlugin) handleEndPoll(vars map[string]string, request *model.
 				ID:    "dialog.end.submitLabel",
 				Other: "End",
 			}),
+			State: p.getConfiguration().SecureToken,
 		},
 	}
 
@@ -580,6 +605,7 @@ func (p *MatterpollPlugin) handleDeletePoll(vars map[string]string, request *mod
 				ID:    "dialog.delete.submitLabel",
 				Other: "Delete",
 			}),
+			State: p.getConfiguration().SecureToken,
 		},
 	}
 

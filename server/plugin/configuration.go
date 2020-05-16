@@ -10,7 +10,7 @@ import (
 // deserialized from the Mattermost server configuration in OnConfigurationChange.
 type configuration struct {
 	Trigger        string `json:"trigger"`
-	SecureToken    string `json:"secure_token"`
+	SecureToken    string `json:"securetoken"`
 	ExperimentalUI bool   `json:"experimentalui"`
 }
 

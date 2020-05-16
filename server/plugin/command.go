@@ -261,6 +261,7 @@ func (p *MatterpollPlugin) getCreatePollDialog(siteURL, rootID string, l *i18n.L
 			Other: "Create",
 		}),
 		Elements: elements,
+		State:    p.getConfiguration().SecureToken,
 	}
 
 	return dialog

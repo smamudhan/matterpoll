@@ -29,7 +29,8 @@
       "display_name": "Secure Token",
       "type": "generated",
       "help_text": "",
-      "regenerate_help_text": "**Regenerating will break existing polls.**"
+      "regenerate_help_text": "**Regenerating will break existing polls.**",
+      "default": ""
     },{
       "key": "ExperimentalUI",
       "display_name": "Experimental UI",
