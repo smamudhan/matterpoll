@@ -6,7 +6,7 @@
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/2588/badge)](https://bestpractices.coreinfrastructure.org/projects/2588)
 [![Releases](https://img.shields.io/github/release/matterpoll/matterpoll.svg)](https://github.com/matterpoll/matterpoll/releases/latest)
 
-Matterpoll is a plugin for [Mattermost](https://mattermost.com/). It allows users to create poll by using a slash command.
+Matterpoll  is a plugin for [Mattermost](https://mattermost.com/). It allows users to create poll by using a slash command.
 
 
 ## Installation
