@@ -1,5 +1,5 @@
 {
-  "bot.description": "Poll Bot",
+  "bot.description": "Guess what? I handle polls too!",
   "command.autoComplete.desc": "Create a poll",
   "command.autoComplete.hint": "\"[Question]\" \"[Answer 1]\" \"[Answer 2]\"...",
   "command.default.no": "No",
